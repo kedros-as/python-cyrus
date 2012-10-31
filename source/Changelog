@@ -1,0 +1,36 @@
+Python-cyrus Changelog:
+
+- cyruslib 0.8.5:
+  * Bugfix: error using [un]subscribe() after login_plain() authentication - <reinaldoc@gmail.com>
+
+- cyruslib 0.8.4:
+  * Bugfix: error using dm() after login_plain() authentication - <reinaldoc@gmail.com>
+  * Change connection method to URL mode - <reinaldoc@gmail.com>
+  * Encode/Decode Imap codification (RFC1642) to UTF-8/ISO-8859-1 - <reinaldoc@gmail.com>
+
+- cyruslib 0.8.3:
+  * BugFix: error getting annotation from mailbox with whitespaces - <reinaldoc@gmail.com>
+
+- cyruslib 0.8.2:
+  * PLAIN Authentication support - <reinaldoc@gmail.com>
+  * Login as user with admin passsword (login_plain) - <reinaldoc@gmail.com>
+  * Login as user with user password (login) - <reinaldoc@gmail.com>
+  * LSUB, SUBSCRIBE, UNSUBSCRIBE support - <reinaldoc@gmail.com>
+
+- cyruslib 0.8.1:
+  * BugFix: remove server ANNOTATION - <reinaldoc@gmail.com>
+  * Recursive mailbox deletion support - <reinaldoc@gmail.com>
+  * New error handling - <reinaldoc@gmail.com>
+  * README writed - <reinaldoc@gmail.com>
+
+- cyruslib 0.8:
+  * SSL support - <reinaldoc@gmail.com>
+  * SETANNOTATION support - <reinaldoc@gmail.com>
+  * LAM/SAM/LQ/SQ on shared mailboxes support - <reinaldoc@gmail.com>
+  * Set unlimited quota support - <reinaldoc@gmail.com>
+
+- sievelib 0.4:
+  * PLAIN Authentication support - <reinaldoc@gmail.com>
+  * Login as user with admin passsword - <reinaldoc@gmail.com>
+  * Deactive script via setactive() - <reinaldoc@gmail.com>
+

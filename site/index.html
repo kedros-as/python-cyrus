@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>python-cyrus: Cyruslib is wrapped interface for imaplib.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="Description" content="cyruslib, python-cyrus" />
+<meta name="Author" content="Reinaldo Gil Lima de Carvalho" />
+<meta name="Keywords" content="cyruslib, python-cyrus" />
+<meta name="Generator" content="Joes Own Editor 3.1" />
+<link rel="shortcut icon" href="favicon.ico" />
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+<body>
+<h4>python-cyrus</h4>
+<div class="menu">
+<p> - <a href="http://sourceforge.net/projects/python-cyrus">Project home</a>
+ - <a href="http://sourceforge.net/project/showfiles.php?group_id=218273">Download now</a>
+ - <a href="http://sourceforge.net/tracker/?group_id=218273">Report Bug or Support request</a></p>
+</div>
+<p> </p>
+<div class="menu"><p>Cyruslib is wrapped interface for imaplib.py.</p></div>
+<p> </p>
+
+<div class="menu">
+<p> - <a href="http://sourceforge.net/donate/index.php?group_id=218273">Donate now</a>. (PayPal - create sourceforge account <a href="http://sourceforge.net/account/registration/">here</a>)</p>
+</div>
+
+<h5></h5>
+<div class="menu"><p class="bold">Connection:</p></div>
+<pre>
+import cyruslib
+
+# without SSL
+imap = cyruslib.CYRUS("imap://localhost:143")
+
+# with SSL
+imap = cyruslib.CYRUS("imaps://localhost:993")
+</pre>
+
+<div class="menu"><p class="bold">Login:</p></div>
+<pre>
+# Admin login (virtdomains: yes)
+imap.login("admin@example.com", "password")
+
+# Logon as user with admin password (virtdomains: yes)
+# SSL required!
+imap.login_plain("admin@example.com", "password", "user@example.com")
+
+# Admin login (virtdomains: no)
+imap.login("admin", "password")
+
+# Logon as user with admin password (virtdomains: no)
+# SSL required!
+imap.login_plain("admin", "password", "user")
+</pre>
+
+<div class="menu"><p class="bold">Exception handle:</p></div>
+<pre>
+try:
+    imap = cyruslib.CYRUS("imap://localhost:143")
+    imap.login("admin@example.com", "password")
+    # do anything here (cm, dm, lam, ...)
+except cyruslib.CYRUSError, e:
+    print "%s: %s" % (e[1], e[2])
+</pre>
+
+<div class="menu"><p class="bold">List Mailbox:</p></div>
+<pre>
+#  To list all mailboxes                       lm()
+#  To list users top mailboxes                 lm("user/%")
+#  To list all users mailboxes                 lm("user/*")
+#  To list users mailboxes startwith a word    lm("user/word*")
+#  To list global top folders                  lm("%")
+#  To list global startwith a word             unsupported by server
+#      suggestion (take care)                  lm("word*")
+
+for mbx in imap.lm():
+    print mbx
+</pre>
+
+<div class="menu"><p class="bold">Codification:</p></div>
+<pre>
+for mbx in imap.lm("user/rei/*"): print mbx
+&gt;    user/rei/caf&amp;AOk-
+&gt;    user/rei/ma&amp;AOc-a
+
+imap.setEncoding('utf-8') # utf-8, iso-8859-1
+for mbx in imap.lm("user/rei/*"): print mbx
+&gt;    user/rei/caf&eacute;
+&gt;    user/rei/ma&ccedil;a
+</pre>
+
+<div class="menu"><p class="bold">Create Mailbox:</p></div>
+<pre>
+# unixhierarchysep: yes
+imap.cm("user/rei")
+
+# unixhierarchysep: no
+imap.cm("user.rei")
+
+# or delimiter independent
+imap.cm("user%srei" % imap.SEP)
+
+# also
+imap.cm("user%srei%sSent" % (imap.SEP, imap.SEP))
+
+# Global Mailbox (also availble to others commands)
+imap.cm("Notices")
+</pre>
+
+<div class="menu"><p class="bold">Delete Mailbox:</p></div>
+<pre>
+# User Mailbox
+imap.dm("user/rei")
+</pre>
+
+<div class="menu"><p class="bold">Rename or Change Imap-Partition:</p></div>
+<pre>
+imap.rename("user/rei/sent-mail", "user/rei/Sent")
+
+# Changing Imap-Partition (partition-label2 should be configured imapd.conf)
+imap.rename("user/rei", "user/rei", "label2")
+</pre>
+
+<div class="menu"><p class="bold">List ACLs:</p></div>
+<pre>
+ACLdict = imap.lam("user/rei")
+for acl in ACLdict.keys():
+    print "%s: %s" % (acl, ACLdict.get(acl))
+</pre>
+
+<div class="menu"><p class="bold">Set ACL:</p></div>
+<pre>
+# virtdomains: yes
+imap.sam("user/rei", "johndoe@example.com", "lrsw")
+
+# virtdomains: no
+imap.sam("user/rei", "johndoe", "lrsw")
+</pre>
+
+<div class="menu"><p class="bold">List Quota:</p></div>
+<pre>
+# If quota does not exist then Exception is called
+print imap.lq("user/rei")
+
+for mailbox in imap.lm("user/%"):
+    try:
+        used, limit = imap.lq(mailbox)
+        print "%s:\t%s\t%s\t%s%%" % (mailbox, used, limit, used * 100/ limit)
+    except:
+        print "%s:\t%s\t%s\t%s%%" % (mailbox, 0, 0, 0)
+</pre>
+
+<div class="menu"><p class="bold">Set Quota:</p></div>
+<pre>
+# Value in Kbytes
+imap.sq("user/rei", "10240000")
+
+# Unlimited
+imap.sq("user/rei", "0")
+
+# for all
+for mbx in imap.lm("user/%"):
+    if mbx not in ['user/rei', 'user/boss']:
+        imap.sq(mbx, "102400")
+</pre>
+
+<div class="menu"><p class="bold">Get Annotation:</p></div>
+<pre>
+# Server Annotation - ALL
+print imap.getannotation("", "*")
+
+# also
+annotations = imap.getannotation("", "*").get("")
+for annot in annotations:
+    print "%s: %s" % (annot, annotations.get(annot))
+
+# especific
+print imap.getannotation("", "/motd")
+print imap.getannotation("", "/vendor/cmu/cyrus-imapd/shutdown")
+
+# Mailbox Annotation - ALL
+print imap.getannotation("user/rei", "*")
+# From ALL subfolders
+print imap.getannotation("user/rei/*", "*")
+
+# also
+annotations = imap.getannotation("user/rei/*", "*")
+for mailbox in annotations.keys():
+    for annot in annotations.get(mailbox).keys():
+        print "%s: %s: %s" % (mailbox, annot, annotations.get(mailbox).get(annot))
+
+# especific
+print imap.getannotation("user/rei", "/vendor/cmu/cyrus-imapd/expire")
+print imap.getannotation("user/rei", "/vendor/cmu/cyrus-imapd/partition")
+
+# also
+print imap.getannotation("user/rei", "/vendor/cmu/cyrus-imapd/partition").get("user/rei").get("/vendor/cmu/cyrus-imapd/partition")
+</pre>
+
+<div class="menu"><p class="bold">Set Annotation:</p></div>
+<pre>
+# Server Annotation
+imap.setannotation("", "/motd", "The server will be unavailable tomorrow.")
+imap.setannotation("", "/vendor/cmu/cyrus-imapd/shutdown", "The server is unavailble until 9am.")
+# Unset
+imap.setannotation("", "/motd", "")
+imap.setannotation("", "/vendor/cmu/cyrus-imapd/shutdown", "")
+
+# Mailbox Annotation
+imap.setannotation("user/rei/Trash", "/vendor/cmu/cyrus-imapd/expire", "60")
+imap.setannotation("user/rei/Spam", "/vendor/cmu/cyrus-imapd/expire", "30")
+# Unset
+imap.setannotation("user/rei/Trash", "/vendor/cmu/cyrus-imapd/expire", "")
+imap.setannotation("user/rei/Spam", "/vendor/cmu/cyrus-imapd/expire", "")
+</pre>
+
+<div class="menu"><p class="bold">Reconstruct:</p></div>
+<pre>
+imap.reconstruct("user/rei")
+</pre>
+
+<div class="menu"><p class="bold">List Subscribed:</p></div>
+<pre>
+imap = cyruslib.CYRUS("imaps://localhost:993")
+imap.login_plain("admin@example.com", "password", "rei@example.com")
+imap.lsub()
+</pre>
+
+<div class="menu"><p class="bold">Subscribe:</p></div>
+<pre>
+imap = cyruslib.CYRUS("imap://localhost:143")
+imap.login("admin@example.com", "password")
+imap.cm("user%srei" % imap.SEP)
+imap.cm("user%srei%sTrash" % (imap.SEP, imap.SEP))
+imap.cm("user%srei%sSent" % (imap.SEP, imap.SEP))
+imap.cm("user%srei%sDrafts" % (imap.SEP, imap.SEP))
+imap.cm("user%srei%sSpam" % (imap.SEP, imap.SEP))
+del imap
+
+# ssl only
+imap = cyruslib.CYRUS("imaps://localhost:993")
+imap.login_plain("admin@example.com", "password", "rei@example.com")
+imap.subscribe("INBOX")
+imap.subscribe("INBOX%sTrash" % imap.SEP)
+imap.subscribe("INBOX%sSent" % imap.SEP)
+imap.subscribe("INBOX%sDrafts" % imap.SEP)
+imap.subscribe("INBOX%sSpam" % imap.SEP)
+del imap
+</pre>
+
+<div class="menu"><p class="bold">Unsubscribe:</p></div>
+<pre>
+imap = cyruslib.CYRUS("imaps://localhost:993")
+imap.login_plain("admin@example.com", "password", "rei@example.com")
+imap.unsubscribe("INBOX%sSpam" % imap.SEP)
+</pre>
+
+<h4></h4>
+<pre class="tcblue">
+  Authors
+</pre>
+<pre>  Reinaldo de Carvalho (reinaldoc{NOSPAM}gmail.com)</pre>
+<br />
+<h5></h5>
+<a href="http://sourceforge.net/donate/index.php?group_id=218273">
+<img src="http://images.sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" align="left" /> </a>
+<a href="http://www.catb.org/hacker-emblem/">
+<img src="glider.jpg" border="0" alt="hacker emblem" title="hacker emblem" align="right" /></a>
+<a href="http://sourceforge.net">
+<img src="http://sflogo.sourceforge.net/sflogo.php?group_id=218273&amp;type=2" width="125" height="37" border="0" alt="SourceForge.net Logo" align="right" /></a>
+
+</body>
+</html>
