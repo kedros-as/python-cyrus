@@ -36,8 +36,8 @@ try:
     import imaplib
     import re
     from binascii import b2a_base64
-except ImportError, e:
-    print e
+except ImportError as e:
+    print(e)
     exit(1)
 
 Commands = {
@@ -79,7 +79,7 @@ def getflags(test):
 ### A smart function to return an array of splitted strings
 ### and honours quoted strings
 def splitquote(text):
-    data = text.split(QUOTE)
+    data = text.decode().split(QUOTE)
     if len(data) == 1: # no quotes
         res = data[0].split()
     else:
@@ -116,17 +116,6 @@ class IMAP4(imaplib.IMAP4):
             return unquote(self.list(DQUOTE, DQUOTE)[1][0]).split()[1]
         except:
             return DEFAULT_SEP
-
-    def isadmin(self):
-        ### A trick to check if the user is admin or not
-        ### normal users cannot use dump command
-        try:
-            res, msg = self._simple_command('DUMP', 'NIL')
-            if msg[0].lower().find('denied') == -1:
-                return True
-        except:
-            pass
-        return False
 
     def id(self):
         try:
@@ -188,17 +177,6 @@ class IMAP4_SSL(imaplib.IMAP4_SSL):
         except:
             return DEFAULT_SEP
 
-    def isadmin(self):
-        ### A trick to check if the user is admin or not
-        ### normal users cannot use dump command
-        try:
-            res, msg = self._simple_command('DUMP', 'NIL')
-            if msg[0].lower().find('denied') == -1:
-                return True
-        except:
-            pass
-        return False
-
     def id(self):
         try:
             typ, dat = self._simple_command('ID', 'NIL')
@@ -248,17 +226,6 @@ class IMAP4_SSL(imaplib.IMAP4_SSL):
     def reconstruct(self, mailbox):
         return self._simple_command('RECONSTRUCT', mailbox)
 
-    def login_plain(self, admin, password, asUser):
-        if asUser:
-            encoded = b2a_base64("%s\0%s\0%s" % (asUser, admin, password)).strip()
-        else:
-            encoded = b2a_base64("%s\0%s\0%s" % (admin, admin, password)).strip()
-
-        res, data = self._simple_command('AUTHENTICATE', 'PLAIN', encoded)
-        if ok(res):
-            self.state = 'AUTH'
-        return res, data
-        
 
 class CYRUS:
     ERROR = {}
@@ -290,9 +257,9 @@ class CYRUS:
     def __init__(self, url = 'imap://localhost:143'):
         self.VERBOSE = False
         self.AUTH = False
-        self.ADMIN = None
+        self.USERNAME = None
+        self.ADMINACL = "c"
         self.AUSER = None
-        self.ADMINACL = 'c'
         self.SEP = DEFAULT_SEP
         self.ENCODING = 'imap'
         self.NORMALIZE = False
@@ -322,7 +289,7 @@ class CYRUS:
     
     def __verbose(self, msg):
         if self.VERBOSE:
-            print >> self.LOGFD, msg
+            print(msg, file=self.LOGFD)
 
     def __doexception(self, function, msg=None, *args):
         if msg is None:
@@ -362,7 +329,7 @@ class CYRUS:
             res, msg = wrapped(*args)
             if ok(res):
                 return res, msg
-        except Exception, info:
+        except Exception as info:
             error = info.args[0].split(':').pop().strip()
             if error.upper().startswith('BAD'):
                 error = error.split('BAD', 1).pop().strip()
@@ -408,46 +375,21 @@ class CYRUS:
             self.__doexception("LOGIN", self.ERROR.get("AUTH")[1])
         try:
             res, msg = self.m.login(username, password)
-            admin = self.m.isadmin()
-        except Exception, info:
+        except Exception as info:
             error = info.args[0].split(':').pop().strip()
             self.__doexception("LOGIN", error)
-        if admin or forceNoAdmin:
-            self.ADMIN = username
-        else:
-            self.__doexception("LOGIN", self.ERROR.get("ADMIN")[1])
         self.SEP = self.m.getsep()
         self.AUTH = True
+        self.USERNAME = username
         self.__verbose( '[LOGIN %s] %s: %s' % (username, res, msg[0]) )
-
-    def login_plain(self, admin, password, asUser = None, forceNoAdmin = False):
-        if self.AUTH:
-            self.__doexception("LOGINPLAIN", self.ERROR.get("AUTH")[1])
-        if not self.ssl:
-            self.__doexception("LOGINPLAIN", self.ERROR.get("LOGINPLAIN")[1])
-        res, msg = self.__docommand("login_plain", admin, password, asUser)
-        self.__verbose( '[AUTHENTICATE PLAIN %s] %s: %s' % (admin, res, msg[0]) )
-
-        if ok(res):
-            if asUser is None:
-                if self.m.isadmin() or forceNoAdmin:
-                    self.ADMIN = admin
-                else:
-                    self.__doexception("LOGIN", self.ERROR.get("ADMIN")[1])
-            else:
-                self.ADMIN = asUser
-                self.AUSER = asUser
-            self.SEP = self.m.getsep()
-            self.AUTH = True
 
     def logout(self):
         try:
             res, msg = self.m.logout()
-        except Exception, info:
+        except Exception as info:
             error = info.args[0].split(':').pop().strip()
             self.__doexception("LOGOUT", error)
         self.AUTH = False
-        self.ADMIN = None
         self.AUSER = None
         self.__verbose( '[LOGOUT] %s: %s' % (res, msg[0]) )
 
@@ -468,7 +410,7 @@ class CYRUS:
         if re.search("&", text):
             text = re.sub("/", "+AC8-", text)
             text = re.sub("&", "+", text)
-            text = unicode(text, 'utf-7').encode(self.ENCODING)
+            text = str(text, 'utf-7').encode(self.ENCODING)
         return text
 
     def encode(self, text):
@@ -481,7 +423,7 @@ class CYRUS:
     def __decode(self, text):
         text = re.sub("/", "-&", text)
         text = re.sub(" ", "-@", text)
-        text = unicode(text, self.ENCODING).encode('utf-7')
+        text = str(text, self.ENCODING).encode('utf-7')
         text = re.sub("-@", " ", text)
         text = re.sub("-&", "/", text)
         text = re.sub("\+", "&", text)
@@ -524,6 +466,7 @@ class CYRUS:
 
         mb = []
         for mailbox in ml:
+            mailbox = mailbox.decode()
             res = re_mb.match(mailbox)
             if res is None: continue
             mbe = unquote(res.group(2))
@@ -540,7 +483,7 @@ class CYRUS:
     def __dm(self, mailbox):
         if not mailbox:
             return True
-        self.__docommand("setacl", self.decode(mailbox), self.ADMIN, self.ADMINACL)
+        self.__docommand("setacl", self.decode(mailbox), self.USERNAME, self.ADMINACL)
         res, msg = self.__docommand("delete", self.decode(mailbox))
         self.__verbose( '[DELETE %s] %s: %s' % (mailbox, res, msg[0]) )
 
@@ -574,7 +517,7 @@ class CYRUS:
             try:
                 userid = self.encode(aclList[i])
                 rights = aclList[i + 1]
-            except Exception, info:
+            except Exception as info:
                 self.__verbose( '[GETACL %s] BAD: %s' % (mailbox, info.args[0]) )
                 raise self.__doraise("GETACL")
             self.__verbose( '[GETACL %s] %s %s' % (mailbox, userid, rights) )
@@ -613,7 +556,7 @@ class CYRUS:
         self.__prepare('SETQUOTA', mailbox)
         try:
             limit = int(limit)
-        except ValueError, e:
+        except ValueError as e:
             self.__verbose( '[SETQUOTA %s] BAD: %s %s' % (mailbox, self.ERROR.get("SETQUOTA")[1], limit) )
             raise self.__doraise("SETQUOTA")
         res, msg = self.__docommand("setquota", self.decode(mailbox), limit)
@@ -636,9 +579,9 @@ class CYRUS:
             key = annotation[3]
             value = annotation[7]
             self.__verbose( '[GETANNOTATION %s] %s: %s' % (mbx, key, value) )
-            if not ann.has_key(mbx):
+            if mbx not in ann:
                 ann[mbx] = {}
-            if not ann[mbx].has_key(key):
+            if key not in ann[mbx]:
                 ann[mbx][key] = value
         return ann
 

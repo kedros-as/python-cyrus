@@ -198,7 +198,7 @@ class MANAGESIEVE:
 
     def __getattr__(self, attr):
         #    Allow UPPERCASE variants of MANAGESIEVE command methods.
-        if commands.has_key(attr):
+        if attr in commands:
             return getattr(self, attr.lower())
         raise AttributeError("Unknown MANAGESIEVE command: '%s'" % attr)
 
@@ -263,7 +263,7 @@ class MANAGESIEVE:
             raise self.error(
                 'Command %s illegal in state %s' % (name, self.state))
         # concatinate command and arguments (if any)
-        data = " ".join(filter(None, (name, arg1, arg2)))
+        data = " ".join([_f for _f in (name, arg1, arg2) if _f])
         if __debug__:
             if self.debug >= 4: self._mesg('> %r' % data)
             else: self._log('> %s' % data)
@@ -274,7 +274,7 @@ class MANAGESIEVE:
                     if self.debug >= 4: self._mesg('> %r' % o)
                     else: self._log('> %r' % data)
                 self._send('%s%s' % (o, CRLF))
-        except (socket.error, OSError), val:
+        except (socket.error, OSError) as val:
             raise self.abort('socket error: %s' % val)
         return self._get_response()
 
@@ -377,7 +377,7 @@ class MANAGESIEVE:
         self.mo = cre.match(s)
         if __debug__:
             if self.mo is not None and self.debug >= 5:
-                self._mesg("\tmatched r'%s' => %s" % (cre.pattern, `self.mo.groups()`))
+                self._mesg("\tmatched r'%s' => %s" % (cre.pattern, repr(self.mo.groups())))
         return self.mo is not None
 
 
